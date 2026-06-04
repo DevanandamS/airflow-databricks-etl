@@ -9,3 +9,6 @@ dbt/target/
 dbt/logs/
 
 .vscode/
+
+data/landing/*.xlsx
+data/landing/*.csv
