@@ -11,18 +11,12 @@ services:
       - "5432:5432"
 
   airflow-init:
-    image: apache/airflow:2.10.5
+    build: .
     container_name: airflow-init
     depends_on:
       - postgres
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
-      - ./airflow/plugins:/opt/airflow/plugins
     command: >
       bash -c "
       airflow db migrate &&
@@ -36,7 +30,7 @@ services:
       "
 
   airflow-webserver:
-    image: apache/airflow:2.10.5
+    build: .
     container_name: airflow-webserver
     depends_on:
       - postgres
@@ -45,8 +39,6 @@ services:
       - "8080:8080"
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
@@ -54,15 +46,13 @@ services:
     command: webserver
 
   airflow-scheduler:
-    image: apache/airflow:2.10.5
+    build: .
     container_name: airflow-scheduler
     depends_on:
       - postgres
       - airflow-init
     environment:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
