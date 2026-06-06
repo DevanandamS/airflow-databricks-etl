@@ -2,18 +2,29 @@ from datetime import datetime, timedelta
 
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.models import Variable
 
 
 def bronze_task():
-    print("Running Bronze Layer")
 
+    env = Variable.get("environment")
+    print(
+        f"Submitting Bronze Databricks Job in {env}"
+    )
 
 def silver_task():
-    print("Running Silver Layer")
 
+    env = Variable.get("environment")
+    print(
+        f"Submitting Silver Databricks Job in {env}"
+        )
 
 def gold_task():
-    print("Running Gold Layer")
+
+    env = Variable.get("environment")
+    print(
+        f"Submitting Gold Databricks Job in {env}"
+        )
 
 
 default_args = {
