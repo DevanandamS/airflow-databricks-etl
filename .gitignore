@@ -12,3 +12,8 @@ dbt/logs/
 
 data/landing/*.xlsx
 data/landing/*.csv
+
+airflow/logs
+.env
+
+dbt/profiles.yml

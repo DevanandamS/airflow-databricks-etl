@@ -1,0 +1,11 @@
+online_retail_dbt:
+  outputs:
+    dev:
+      type: databricks
+      catalog: workspace
+      schema: default
+      host: YOUR_DATABRICKS_HOST
+      http_path: YOUR_HTTP_PATH
+      token: YOUR_DATABRICKS_TOKEN
+      threads: 4
+  target: dev

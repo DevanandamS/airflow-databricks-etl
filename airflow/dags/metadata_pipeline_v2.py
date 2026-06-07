@@ -1,6 +1,7 @@
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.models import Variable
+from airflow.operators.bash import BashOperator
 
 from datetime import datetime
 
@@ -94,11 +95,7 @@ def execute_pipeline(
 
 with DAG(
     dag_id="metadata_pipeline_v2",
-    start_date=datetime(
-        2025,
-        1,
-        1
-    ),
+    start_date=datetime(2025,1,1),
     schedule=None,
     catchup=False,
     tags=[
@@ -125,8 +122,33 @@ with DAG(
             "depends_on"
         ]:
 
-            tasks[
-                dependency
-            ] >> tasks[
-                pipeline_name
-            ]
+            tasks[dependency] >> tasks[pipeline_name]
+
+dbt_run = BashOperator(
+    task_id="dbt_run",
+    bash_command="""
+    export DBT_PROFILES_DIR=/opt/airflow/.dbt
+    export DBT_LOG_PATH=/tmp/dbt_logs
+    export DBT_TARGET_PATH=/tmp/dbt_target
+
+    cd /opt/airflow/dbt/online_retail_dbt
+
+    dbt run
+    """
+)
+
+dbt_test = BashOperator(
+    task_id="dbt_test",
+    bash_command="""
+    export DBT_PROFILES_DIR=/opt/airflow/.dbt
+    export DBT_LOG_PATH=/tmp/dbt_logs
+    export DBT_TARGET_PATH=/tmp/dbt_target
+
+    cd /opt/airflow/dbt/online_retail_dbt
+
+    dbt test
+    """
+)
+
+
+tasks["online_retail_gold"] >> dbt_run >> dbt_test
