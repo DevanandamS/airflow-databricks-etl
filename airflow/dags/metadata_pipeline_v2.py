@@ -1,12 +1,11 @@
-from datetime import datetime, timedelta
-
 from airflow import DAG
 from airflow.operators.python import PythonOperator
+from airflow.models import Variable
 
+from datetime import datetime
 
-# ------------------------------------------------------------------
-# Metadata Provider
-# ------------------------------------------------------------------
+import requests
+
 
 def get_pipeline_metadata():
 
@@ -14,11 +13,13 @@ def get_pipeline_metadata():
 
         "online_retail_bronze": {
             "layer": "bronze",
+            "job_id": 729150885683146,
             "depends_on": []
         },
 
         "online_retail_silver": {
             "layer": "silver",
+            "job_id": 163860062692317,
             "depends_on": [
                 "online_retail_bronze"
             ]
@@ -26,6 +27,7 @@ def get_pipeline_metadata():
 
         "online_retail_gold": {
             "layer": "gold",
+            "job_id": 553652760992205,
             "depends_on": [
                 "online_retail_silver"
             ]
@@ -33,127 +35,98 @@ def get_pipeline_metadata():
     }
 
 
-# ------------------------------------------------------------------
-# Generic Executor
-# ------------------------------------------------------------------
-
-def execute_pipeline(
-        pipeline_name,
-        layer):
-
-    print("=" * 60)
-
-    print(
-        f"Starting Pipeline: {pipeline_name}"
-    )
-
-    print(
-        f"Layer: {layer}"
-    )
-
-    print(
-        "Metadata lookup successful"
-    )
-
-    print(
-        "Passing parameter:"
-    )
-
-    print(
-        f"pipeline_name={pipeline_name}"
-    )
-
-    print(
-        "Notebook would execute:"
-    )
-
-    print(
-        "dbutils.widgets.get('pipeline_name')"
-    )
-
-    print(
-        f"Completed Pipeline: {pipeline_name}"
-    )
-
-    print("=" * 60)
-
-
-# ------------------------------------------------------------------
-# Default DAG Configuration
-# ------------------------------------------------------------------
-
-default_args = {
-
-    "owner": "data_engineering",
-
-    "depends_on_past": False,
-
-    "retries": 3,
-
-    "retry_delay": timedelta(minutes=1)
-}
-
-
-# ------------------------------------------------------------------
-# Load Metadata
-# ------------------------------------------------------------------
-
 PIPELINES = get_pipeline_metadata()
 
 
-# ------------------------------------------------------------------
-# DAG Definition
-# ------------------------------------------------------------------
+def trigger_databricks_job(job_id):
 
-with DAG(
+    databricks_host = Variable.get(
+        "DATABRICKS_HOST"
+    )
 
-    dag_id="metadata_pipeline_v2",
+    databricks_token = Variable.get(
+        "DATABRICKS_TOKEN"
+    )
 
-    description="Metadata Driven Pipeline Framework V2",
+    headers = {
+        "Authorization": f"Bearer {databricks_token}",
+        "Content-Type": "application/json"
+    }
 
-    start_date=datetime(2025, 1, 1),
+    payload = {
+        "job_id": job_id
+    }
 
-    schedule=None,
+    response = requests.post(
+        f"{databricks_host}/api/2.1/jobs/run-now",
+        headers=headers,
+        json=payload
+    )
 
-    catchup=False,
+    print(
+        f"Status Code: {response.status_code}"
+    )
 
-    default_args=default_args,
+    print(
+        f"Response: {response.text}"
+    )
 
-    tags=[
-        "metadata",
-        "framework",
-        "airflow"
+    response.raise_for_status()
+
+
+def execute_pipeline(
+        pipeline_name):
+
+    job_id = PIPELINES[
+        pipeline_name
+    ][
+        "job_id"
     ]
 
+    print(
+        f"Executing {pipeline_name}"
+    )
+
+    trigger_databricks_job(
+        job_id
+    )
+
+
+with DAG(
+    dag_id="metadata_pipeline_v2",
+    start_date=datetime(
+        2025,
+        1,
+        1
+    ),
+    schedule=None,
+    catchup=False,
+    tags=[
+        "metadata",
+        "databricks"
+    ]
 ) as dag:
 
     tasks = {}
 
-    # --------------------------------------------------------------
-    # Create Tasks Dynamically
-    # --------------------------------------------------------------
-
-    for pipeline_name, pipeline_info in PIPELINES.items():
+    for pipeline_name in PIPELINES:
 
         tasks[pipeline_name] = PythonOperator(
-
             task_id=pipeline_name,
-
             python_callable=execute_pipeline,
-
             op_args=[
-                pipeline_name,
-                pipeline_info["layer"]
+                pipeline_name
             ]
-
         )
 
-    # --------------------------------------------------------------
-    # Create Dependencies Dynamically
-    # --------------------------------------------------------------
+    for pipeline_name, config in PIPELINES.items():
 
-    for pipeline_name, pipeline_info in PIPELINES.items():
+        for dependency in config[
+            "depends_on"
+        ]:
 
-        for dependency in pipeline_info["depends_on"]:
-
-            tasks[dependency] >> tasks[pipeline_name]
+            tasks[
+                dependency
+            ] >> tasks[
+                pipeline_name
+            ]
