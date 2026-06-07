@@ -1,0 +1,39 @@
+version: 2
+
+models:
+
+  - name: stg_customer_sales
+    columns:
+      - name: CustomerID
+        tests:
+          - not_null
+
+  - name: stg_country_sales
+    columns:
+      - name: Country
+        tests:
+          - not_null
+
+  - name: stg_daily_sales
+    columns:
+      - name: sales_date
+        tests:
+          - not_null
+
+  - name: customer_revenue_summary
+    columns:
+      - name: CustomerID
+        tests:
+          - not_null
+
+  - name: country_revenue_summary
+    columns:
+      - name: Country
+        tests:
+          - not_null
+
+  - name: daily_sales_trend
+    columns:
+      - name: sales_date
+        tests:
+          - not_null
